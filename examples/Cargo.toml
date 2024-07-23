@@ -1,0 +1,24 @@
+[package]
+name = "graph_client_connect"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "graph_client_connect"
+path = "src/graph_client_connect.rs"
+
+[[bin]]
+name = "meta_client_connect"
+path = "src/meta_client_connect.rs"
+
+[[bin]]
+name = "storage_client_connect"
+path = "src/storage_client_connect.rs"
+
+[dependencies]
+rust-nebula = { version = "0.1", path = ".." }
+tokio = { version = "1", default-features = false, features = [
+    "macros",
+    "rt-multi-thread",
+] }

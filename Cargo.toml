@@ -1,0 +1,44 @@
+[package]
+name = "rust-nebula"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.docs.rs]
+features = ["graph", "meta", "storage"]
+
+[features]
+default = ["graph", "storage", "meta"]
+graph = ["nebula-fbthrift-graph-v3", "serde"]
+meta = ["nebula-fbthrift-meta-v3"]
+storage = ["nebula-fbthrift-storage-v3", "meta", "serde"]
+show_struct_result = []
+
+[dependencies]
+fbthrift = { package = "fbthrift-git", version = "=0.0.7", default-features = false }
+fbthrift-transport = { version = "0.9", features = ["impl_tokio"] }
+fbthrift-transport-response-handler = { version = "0.7" }
+
+serde = { version = "1", default-features = false, features = [
+    "derive",
+], optional = true }
+
+bytes = { version = "1", default-features = false }
+async-trait = { version = "0.1", default-features = false }
+
+nebula-fbthrift-graph-v3 = { version = "^0.3", default-features = false, optional = true }
+nebula-fbthrift-meta-v3 = { version = "^0.3", default-features = false, optional = true }
+nebula-fbthrift-storage-v3 = { version = "^0.3", default-features = false, optional = true }
+bb8 = "0.8.5"
+
+[dev-dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+serde_repr = { version = "0.1" }
+float-cmp = { version = "0.9" }
+
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true
+
+[workspace]
+members = ["examples"]
