@@ -463,7 +463,6 @@ impl MetaClient {
     }
 }
 
-use std::error::Error;
 use std::fmt;
 
 /// A custom error type for meta client operations.
@@ -501,4 +500,4 @@ impl fmt::Display for MetaClientError {
     }
 }
 
-impl Error for MetaClientError {}
+impl std::error::Error for MetaClientError {}

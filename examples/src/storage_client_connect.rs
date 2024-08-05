@@ -12,7 +12,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let espace_name = "basketballplayer";
     let edge_name = "serve";
 
-    println!("v3_meta_client {:?}", &meta_addr);
+    println!("meta_client {:?}", &meta_addr);
 
     let meta_addr = meta_addr.iter().map(|s| String::from(*s)).collect();
     let mclient = MetaClient::new(&meta_addr).await?;
