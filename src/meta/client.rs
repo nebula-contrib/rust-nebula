@@ -26,8 +26,11 @@ use nebula_fbthrift_meta_v3::{
     EdgeItem, HostItem, IdName, PartItem, Schema, TagItem, ID,
 };
 
-use crate::common::{HostAddr, PartitionID};
 use crate::MetaTransportResponseHandler;
+use crate::{
+    common::{HostAddr, PartitionID},
+    HostAddress,
+};
 
 use super::metacache::{MetaCache, SpaceCache};
 
@@ -146,7 +149,7 @@ where
     connection: MetaConnection<T>,
     meta_cache: MetaCache,
     #[allow(unused)]
-    maddr: Vec<String>,
+    maddr: Vec<HostAddress>,
 }
 
 impl<T> MetaClient<T>
@@ -155,7 +158,7 @@ where
     Bytes: Framing<DecBuf = FramingDecoded<T>>,
     ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
 {
-    pub fn new_with_transport(maddr: &Vec<String>, transport: T) -> Self {
+    pub fn new_with_transport(maddr: &Vec<HostAddress>, transport: T) -> Self {
         Self {
             maddr: maddr.clone(),
             meta_cache: MetaCache::new(),
@@ -454,9 +457,9 @@ where
 }
 
 impl MetaClient {
-    pub async fn new(maddr: &Vec<String>) -> Result<Self, MetaClientError> {
+    pub async fn new(maddr: &Vec<HostAddress>) -> Result<Self, MetaClientError> {
         Ok(Self {
-            connection: MetaConnection::new(&maddr[0]).await?,
+            connection: MetaConnection::new(&maddr[0].to_string()).await?,
             meta_cache: MetaCache::new(),
             maddr: maddr.clone(),
         })

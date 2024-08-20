@@ -1,4 +1,4 @@
-use rust_nebula::{MetaClient, StorageClient};
+use rust_nebula::{HostAddress, MetaClient, StorageClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -6,15 +6,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let meta_addr = vec!["127.0.0.1:9559"];
+    let meta_addr = vec![HostAddress::new("127.0.0.1", 9559)];
     let vspace_name = "basketballplayer";
     let tag_name = "player";
     let espace_name = "basketballplayer";
     let edge_name = "serve";
 
-    println!("meta_client {:?}", &meta_addr);
-
-    let meta_addr = meta_addr.iter().map(|s| String::from(*s)).collect();
     let mclient = MetaClient::new(&meta_addr).await?;
     let mut sclient = StorageClient::new(mclient).await;
 

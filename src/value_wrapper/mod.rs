@@ -256,10 +256,7 @@ impl<'a> ValueWrapper<'a> {
             Value::nVal(v) => v.to_string(),
             Value::bVal(v) => v.to_string(),
             Value::iVal(v) => v.to_string(),
-            Value::fVal(v) => {
-                dbg!(v, v.0);
-                v.0.to_string()
-            }
+            Value::fVal(v) => v.0.to_string(),
             Value::sVal(v) => {
                 let mut s = String::from('"');
                 s.extend(String::from_utf8(v.to_vec()));

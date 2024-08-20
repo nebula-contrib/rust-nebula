@@ -95,8 +95,8 @@ impl DataSetWrapper {
         Ok(val_list)
     }
 
-    pub fn get_row_values_by_index<'a>(&'a self, index: i32) -> Result<Record<'a>, ()> {
-        if index < 0 || index as usize > self.get_row_size() {
+    pub fn get_row_values_by_index<'a>(&'a self, index: usize) -> Result<Record<'a>, ()> {
+        if index >= self.get_row_size() {
             return Err(());
         }
         let rows = self.get_rows();
@@ -238,7 +238,7 @@ macro_rules! dataset_wrapper_proxy {
                 }
             }
 
-            pub fn get_row_values_by_index(&self, index: i32) -> Result<Record, ()> {
+            pub fn get_row_values_by_index(&self, index: usize) -> Result<Record, ()> {
                 if let Some(data_set) = self.dataset() {
                     data_set.get_row_values_by_index(index).map_err(|_| ())
                 } else {

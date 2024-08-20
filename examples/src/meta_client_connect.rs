@@ -1,4 +1,4 @@
-use rust_nebula::MetaClient;
+use rust_nebula::{HostAddress, MetaClient};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -6,9 +6,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let meta_addr = vec!["127.0.0.1:9559"];
+    let meta_addr = vec![HostAddress::new("127.0.0.1", 9559)];
     println!("meta addr: {:?}", &meta_addr);
-    let meta_addr = meta_addr.iter().map(|s| String::from(*s)).collect();
 
     let mut mclient = MetaClient::new(&meta_addr).await?;
 

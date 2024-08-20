@@ -21,7 +21,7 @@ use super::{
     query::{StorageQueryError, StorageScanEdgeOutput, StorageScanVertexOutput},
     StorageTransportResponseHandler,
 };
-use crate::{meta::client::MetaClientError, HostAddr};
+use crate::{common::types::HostAddr, meta::client::MetaClientError};
 use crate::{storage::query::StorageQueryOutput, MetaTransportResponseHandler};
 use crate::{MetaClient, TimezoneInfo};
 

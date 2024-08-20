@@ -20,8 +20,10 @@ use crate::data_deserializer::DataDeserializeErrorKind;
 use crate::dataset_wrapper::{DataSetWrapper, Record};
 use crate::dataset_wrapper_proxy;
 use crate::value_wrapper::ValueWrapper;
-use crate::HostAddr;
-use crate::{common::Row, MetaTransportResponseHandler};
+use crate::{
+    common::{types::HostAddr, Row},
+    MetaTransportResponseHandler,
+};
 use crate::{data_deserializer::DataDeserializeError, TimezoneInfo};
 
 use super::{StorageClient, StorageTransportResponseHandler};

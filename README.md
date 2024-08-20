@@ -20,8 +20,12 @@ It has some examples in [examples](examples/).
 This repo is under construction. Welcome everyone to actively participate in improving the rust client and achieving more functions!
 
 - [ ] Make value wrapper provide comprehensive support for all data types in NebualGraph.
+- [ ] Robust error handling mechanism for value wrapper.
 - [ ] A good session pool for Graph Client, perhaps Storage Client and Meta Client could also use it
 - [ ] More commonly used instructions encapsulation for Graph Client, such as create tag/vertex, show tag/vertex etc.
+- [ ] Iterator for GraphQueryOutput and StorageQueryOutput.
+- [ ] Stream for StorageScanOutput.
+- [ ] More unit tests and code comments.
 
 ## Reference
 
