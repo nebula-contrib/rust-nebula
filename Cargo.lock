@@ -349,6 +349,7 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 name = "graph_client_connect"
 version = "0.1.0"
 dependencies = [
+ "bb8",
  "rust-nebula",
  "tokio",
 ]

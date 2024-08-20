@@ -1,4 +1,6 @@
-use rust_nebula::{graph::query::GraphQuery as _, GraphClient};
+use rust_nebula::{
+    graph::query::GraphQuery as _, HostAddress, SingleConnSessionConf, SingleConnSessionManager,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -6,19 +8,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "127.0.0.1:9669";
-    let username = "root";
-    let password = "password";
-
-    println!(
-        "graph_client addr:{} username:{} password:{}",
-        addr, username, password
+    let config = SingleConnSessionConf::new(
+        vec![HostAddress::new("127.0.0.1", 9669)],
+        "root".to_owned(),
+        "password".to_owned(),
+        Some("basketballplayer".to_string()),
     );
-
     //
-    let client = GraphClient::new(&addr).await?;
+    let client = SingleConnSessionManager::new(config);
 
-    let mut session = client.authenticate(&username, &password).await?;
+    let mut session = client.get_session().await?;
 
     let res = session.show_hosts().await?;
     println!("{:?}", res);
@@ -37,12 +36,27 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(dataset) = output.dataset() {
         println!("{}", dataset);
     }
-    let output = session
-        .query("MATCH (v:player)-[:follow]->() RETURN v;")
-        .await?;
+    // let output = session
+    //     .query("MATCH (v:player)-[:follow]->() RETURN v;")
+    //     .await?;
+    // if let Some(dataset) = output.dataset() {
+    //     println!("{}", dataset);
+    // }
+
+    let output = session.query("SHOW HOSTS META;").await?;
     if let Some(dataset) = output.dataset() {
         println!("{}", dataset);
     }
-
+    for i in 0..output.get_row_size() {
+        match output.get_row_values_by_index(i) {
+            Ok(record) => {
+                let host = record.get_value_by_col_name("Host").unwrap();
+                let port = record.get_value_by_col_name("Port").unwrap();
+                let host_addr = format!("{}:{}", host.as_string()?, port.as_int()?);
+                println!("{}", host_addr);
+            }
+            _ => {}
+        }
+    }
     Ok(())
 }

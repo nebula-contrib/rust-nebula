@@ -138,15 +138,7 @@ impl core::fmt::Display for GraphQueryError {
     }
 }
 
-impl std::error::Error for GraphQueryError {
-    fn description(&self) -> &str {
-        match self {
-            Self::ExecuteError(_) => "ExecuteError",
-            Self::ResponseError(_, _) => "ResponseError",
-            Self::DataDeserializeError(_) => "DataDeserializeError",
-        }
-    }
-}
+impl std::error::Error for GraphQueryError {}
 
 //
 //

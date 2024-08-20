@@ -9,6 +9,10 @@ name = "graph_client_connect"
 path = "src/graph_client_connect.rs"
 
 [[bin]]
+name = "graph_session_pool_connect"
+path = "src/graph_session_pool_connect.rs"
+
+[[bin]]
 name = "meta_client_connect"
 path = "src/meta_client_connect.rs"
 
@@ -17,6 +21,7 @@ name = "storage_client_connect"
 path = "src/storage_client_connect.rs"
 
 [dependencies]
+bb8 = "0.8.5"
 rust-nebula = { version = "0.1", path = ".." }
 tokio = { version = "1", default-features = false, features = [
     "macros",

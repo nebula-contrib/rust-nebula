@@ -1,17 +1,17 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use fbthrift::{
-    ApplicationException, ApplicationExceptionErrorCode, BinaryProtocol, BufMutExt, Framing,
-    FramingDecoded, FramingEncodedFinal, ProtocolEncoded, Transport,
+    BinaryProtocol, BufMutExt, Framing, FramingDecoded, FramingEncodedFinal, ProtocolEncoded,
+    Transport,
 };
 use fbthrift_transport::{
     impl_tokio::{TokioSleep, TokioTcpStream},
-    AsyncTransport, AsyncTransportConfiguration,
+    AsyncTransport,
 };
 use nebula_fbthrift_graph_v3::{
-    client::{GraphService, GraphServiceImpl},
+    client::GraphService as _,
     dependencies::common::types::ErrorCode,
-    errors::graph_service::{AuthenticateError, ExecuteError, ExecuteJsonError, SignoutError},
+    errors::graph_service::{ExecuteError, ExecuteJsonError, SignoutError},
 };
 use std::io::{Error as IoError, ErrorKind as IoErrorKind};
 
@@ -21,118 +21,16 @@ use crate::{
     GraphTransportResponseHandler,
 };
 
-use super::query::GraphQuery;
+use super::{connection::GraphConnection, query::GraphQuery};
+
+pub mod single_conn_session_manager;
 
 //
 //
 //
-struct GraphConnection<
+pub struct SingleConnSession<
     T = AsyncTransport<TokioTcpStream, TokioSleep, GraphTransportResponseHandler>,
 > where
-    T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
-    Bytes: Framing<DecBuf = FramingDecoded<T>>,
-    ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
-{
-    service: GraphServiceImpl<BinaryProtocol, T>,
-}
-
-impl<T> GraphConnection<T>
-where
-    T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
-    Bytes: Framing<DecBuf = FramingDecoded<T>>,
-    ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
-{
-    #[allow(unused)]
-    fn new_with_transport(transport: T) -> Self {
-        Self {
-            service: GraphServiceImpl::<BinaryProtocol, _>::new(transport),
-        }
-    }
-}
-
-impl GraphConnection {
-    async fn new(addr: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let transport = AsyncTransport::with_tokio_tcp_connect(
-            addr,
-            AsyncTransportConfiguration::new(GraphTransportResponseHandler),
-        )
-        .await?;
-        Ok(Self {
-            service: GraphServiceImpl::<BinaryProtocol, _>::new(transport),
-        })
-    }
-}
-
-//
-//
-//
-pub struct GraphClient<
-    T = AsyncTransport<TokioTcpStream, TokioSleep, GraphTransportResponseHandler>,
-> where
-    T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
-    Bytes: Framing<DecBuf = FramingDecoded<T>>,
-    ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
-{
-    connection: GraphConnection<T>,
-}
-
-impl<T> GraphClient<T>
-where
-    T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
-    Bytes: Framing<DecBuf = FramingDecoded<T>>,
-    ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
-{
-    pub fn new_with_transport(transport: T) -> Self {
-        Self {
-            connection: GraphConnection::new_with_transport(transport),
-        }
-    }
-
-    #[allow(clippy::ptr_arg)]
-    pub async fn authenticate(
-        self,
-        username: &str,
-        password: &str,
-    ) -> Result<GraphSession<T>, AuthenticateError> {
-        let res = self
-            .connection
-            .service
-            .authenticate(&username.as_bytes().to_vec(), &password.as_bytes().to_vec())
-            .await?;
-
-        if res.error_code != ErrorCode::SUCCEEDED {
-            return Err(ApplicationException::new(
-                ApplicationExceptionErrorCode::Unknown,
-                res.error_msg
-                    .map(|x| String::from_utf8_lossy(&x).to_string())
-                    .unwrap_or_else(|| "Unknown".to_owned()),
-            )
-            .into());
-        }
-        let session_id = res.session_id.ok_or_else(|| {
-            ApplicationException::new(
-                ApplicationExceptionErrorCode::InternalError,
-                "Missing session_id".to_owned(),
-            )
-        })?;
-
-        Ok(GraphSession::new(self.connection, session_id))
-    }
-}
-
-impl GraphClient {
-    pub async fn new(addr: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self {
-            connection: GraphConnection::new(addr).await?,
-        })
-    }
-}
-
-//
-//
-//
-pub struct GraphSession<T>
-where
     T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
     Bytes: Framing<DecBuf = FramingDecoded<T>>,
     ProtocolEncoded<BinaryProtocol>: BufMutExt<Final = FramingEncodedFinal<T>>,
@@ -143,7 +41,7 @@ where
     close_required: bool,
 }
 
-impl<T> GraphSession<T>
+impl<T> SingleConnSession<T>
 where
     T: Transport + Framing<DecBuf = std::io::Cursor<Bytes>>,
     Bytes: Framing<DecBuf = FramingDecoded<T>>,
@@ -195,7 +93,7 @@ where
 //
 //
 #[async_trait]
-impl<T> GraphQuery for GraphSession<T>
+impl<T> GraphQuery for SingleConnSession<T>
 where
     T: Transport + Send + Sync + Framing<DecBuf = std::io::Cursor<Bytes>>,
     Bytes: Framing<DecBuf = FramingDecoded<T>>,
