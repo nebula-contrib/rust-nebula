@@ -5,7 +5,7 @@ use fbthrift::{
 };
 use fbthrift_transport::{
     impl_tokio::{TokioSleep, TokioTcpStream},
-    AsyncTransport, AsyncTransportConfiguration,
+    AsyncTransport,
 };
 use nebula_fbthrift_graph_v3::{
     client::{GraphService, GraphServiceImpl},
@@ -14,7 +14,6 @@ use nebula_fbthrift_graph_v3::{
 };
 
 use crate::GraphTransportResponseHandler;
-use crate::HostAddress;
 
 //
 //
@@ -69,18 +68,5 @@ where
         })?;
 
         Ok(session_id)
-    }
-}
-
-impl GraphConnection {
-    pub(super) async fn new(addr: HostAddress) -> Result<Self, Box<dyn std::error::Error>> {
-        let transport = AsyncTransport::with_tokio_tcp_connect(
-            addr.to_string(),
-            AsyncTransportConfiguration::new(GraphTransportResponseHandler),
-        )
-        .await?;
-        Ok(Self {
-            service: GraphServiceImpl::<BinaryProtocol, _>::new(transport),
-        })
     }
 }

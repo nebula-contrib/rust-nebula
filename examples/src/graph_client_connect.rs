@@ -8,13 +8,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let config = SingleConnSessionConf::new(
+    let mut config = SingleConnSessionConf::new(
         vec![HostAddress::new("127.0.0.1", 9669)],
         "root".to_owned(),
         "password".to_owned(),
         Some("basketballplayer".to_string()),
     );
-    //
+    // Set fbThrift to a larger cache size, otherwise if the query result is too large,
+    // e.g. `MATCH (v:player)-[:follow]->() RETURN v;`, it will report an error of `Reach max buffer size`
+    config.set_max_buf_size(1024 * 1024);
+    config.set_buf_size(10 * 1024);
+
     let client = SingleConnSessionManager::new(config);
 
     let mut session = client.get_session().await?;
@@ -36,12 +40,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(dataset) = output.dataset() {
         println!("{}", dataset);
     }
-    // let output = session
-    //     .query("MATCH (v:player)-[:follow]->() RETURN v;")
-    //     .await?;
-    // if let Some(dataset) = output.dataset() {
-    //     println!("{}", dataset);
-    // }
+
+    let output = session
+        .query("MATCH (v:player)-[:follow]->() RETURN v;")
+        .await?;
+    if let Some(dataset) = output.dataset() {
+        // Todo: datasetwrapper doesn't support displaying `path` data type now.
+        println!("{:?}", dataset);
+    }
 
     let output = session.query("SHOW HOSTS META;").await?;
     if let Some(dataset) = output.dataset() {

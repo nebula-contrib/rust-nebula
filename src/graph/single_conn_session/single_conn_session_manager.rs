@@ -1,8 +1,7 @@
-use std::error::Error;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use async_trait::async_trait;
-use fbthrift_transport::AsyncTransportConfiguration;
+use fbthrift_transport::{AsyncTransport, AsyncTransportConfiguration};
 use fbthrift_transport_response_handler::ResponseHandler;
 use nebula_fbthrift_graph_v3::graph_service::AuthenticateError;
 
@@ -16,11 +15,29 @@ use super::SingleConnSession;
 
 #[derive(Debug)]
 pub struct SingleConnSessionConf {
+    /// Set the host addresses of the graphd servers for load balancing
     pub host_addrs: Vec<HostAddress>,
+    /// Index of the current host address being used
     host_idx: AtomicUsize,
+    /// graphd's username
     pub username: String,
+    /// graphd's password
     pub password: String,
+    /// The dafault space after connecting.
+    /// ## Notice
+    /// - If it's set `None`, user has to execute `USE your_space_name;`
+    /// manually before operating on a centain space.
+    /// - If it's set `Some(...)`, user can also switch space by executing
+    /// `USE your_space_name;` manually.
     pub space: Option<String>,
+    /// Set fbthrift buf_size
+    pub buf_size: Option<usize>,
+    /// Set fbthrift max_buf_size
+    pub max_buf_size: Option<usize>,
+    /// Set fbthrift max_parse_response_bytes_count
+    pub max_parse_response_bytes_count: Option<u8>,
+    /// Set fbthrift read_timeout
+    pub read_timeout: Option<u32>,
 }
 
 impl Clone for SingleConnSessionConf {
@@ -31,6 +48,10 @@ impl Clone for SingleConnSessionConf {
             username: self.username.clone(),
             password: self.password.clone(),
             space: self.space.clone(),
+            buf_size: self.buf_size.clone(),
+            max_buf_size: self.max_buf_size.clone(),
+            max_parse_response_bytes_count: self.max_parse_response_bytes_count.clone(),
+            read_timeout: self.read_timeout.clone(),
         }
     }
 }
@@ -47,7 +68,24 @@ impl SingleConnSessionConf {
             username,
             password,
             space,
+            buf_size: None,
+            max_buf_size: None,
+            max_parse_response_bytes_count: None,
+            read_timeout: None,
         }
+    }
+
+    pub fn set_buf_size(&mut self, size: usize) {
+        self.buf_size = Some(size)
+    }
+    pub fn set_max_buf_size(&mut self, size: usize) {
+        self.max_buf_size = Some(size);
+    }
+    pub fn set_max_parse_response_bytes_count(&mut self, size: u8) {
+        self.max_parse_response_bytes_count = Some(size);
+    }
+    pub fn set_read_timeout(&mut self, timeout_ms: u32) {
+        self.read_timeout = Some(timeout_ms);
     }
 }
 
@@ -77,9 +115,22 @@ where
     H: ResponseHandler,
 {
     pub fn new_with_response_handler(config: SingleConnSessionConf, response_handler: H) -> Self {
+        let mut transport_config = AsyncTransportConfiguration::new(response_handler);
+        if let Some(size) = config.max_buf_size {
+            transport_config.set_max_buf_size(size);
+        }
+        if let Some(size) = config.buf_size {
+            transport_config.set_buf_size(size);
+        }
+        if let Some(count) = config.max_parse_response_bytes_count {
+            transport_config.set_max_parse_response_bytes_count(count);
+        }
+        if let Some(timeout_ms) = config.read_timeout {
+            transport_config.set_read_timeout(timeout_ms);
+        }
         Self {
             config,
-            transport_config: AsyncTransportConfiguration::new(response_handler),
+            transport_config,
         }
     }
 }
@@ -90,9 +141,13 @@ impl SingleConnSessionManager {
     }
 
     pub async fn get_session(&self) -> Result<SingleConnSession, SingleConnSessionError> {
-        let conn = GraphConnection::new(self.config.get_next_addr())
-            .await
-            .map_err(SingleConnSessionError::ConnectionError)?;
+        let transport = AsyncTransport::with_tokio_tcp_connect(
+            self.config.get_next_addr().to_string(),
+            self.transport_config.clone(),
+        )
+        .await
+        .map_err(SingleConnSessionError::TransportBuildError)?;
+        let conn = GraphConnection::new_with_transport(transport);
         let session_id = conn
             .authenticate(&self.config.username, &self.config.password)
             .await
@@ -102,8 +157,7 @@ impl SingleConnSessionManager {
         if self.config.space.is_some() {
             session
                 .execute(&format!("Use {};", self.config.space.clone().unwrap()))
-                .await
-                .map_err(SingleConnSessionError::GraphQueryError)?;
+                .await?;
         }
 
         Ok(session)
@@ -130,7 +184,7 @@ impl bb8::ManageConnection for SingleConnSessionManager {
 
 #[derive(Debug)]
 pub enum SingleConnSessionError {
-    ConnectionError(Box<dyn Error>),
+    TransportBuildError(std::io::Error),
     AuthenticateError(AuthenticateError),
     GraphQueryError(GraphQueryError),
 }
@@ -138,10 +192,16 @@ pub enum SingleConnSessionError {
 impl core::fmt::Display for SingleConnSessionError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
-            Self::ConnectionError(err) => write!(f, "ConnectionError {err}"),
+            Self::TransportBuildError(err) => write!(f, "TransportBuildError {err}"),
             Self::AuthenticateError(err) => write!(f, "AuthenticateError {err}"),
             Self::GraphQueryError(err) => write!(f, "GraphQueryError {err}"),
         }
+    }
+}
+
+impl From<GraphQueryError> for SingleConnSessionError {
+    fn from(value: GraphQueryError) -> Self {
+        Self::GraphQueryError(value)
     }
 }
 

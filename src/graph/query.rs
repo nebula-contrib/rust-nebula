@@ -5,7 +5,7 @@ use nebula_fbthrift_graph_v3::{
 use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::common::types::{ErrorCode, Row};
-use crate::data_deserializer::{DataDeserializeError, DataDeserializeErrorKind};
+use crate::data_deserializer::DataDeserializeError;
 use crate::dataset_wrapper_proxy;
 use crate::{
     dataset_wrapper::{DataSetWrapper, Record},
