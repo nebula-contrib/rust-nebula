@@ -8,6 +8,6 @@ pub use transport_response_handler::GraphTransportResponseHandler;
 
 pub mod single_conn_session;
 pub use single_conn_session::single_conn_session_manager::{
-    SingleConnSessionConf, SingleConnSessionError, SingleConnSessionManager,
+    SingleConnSessionConf, SingleConnSessionManager,
 };
-pub use single_conn_session::SingleConnSession;
+pub use single_conn_session::{SingleConnSession, SingleConnSessionError};

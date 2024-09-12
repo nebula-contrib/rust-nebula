@@ -5,40 +5,37 @@ use nebula_fbthrift_graph_v3::{
 use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::common::types::{ErrorCode, Row};
-use crate::data_deserializer::DataDeserializeError;
+use crate::dataset_wrapper::{DataSetError, DataSetWrapper, Record};
 use crate::dataset_wrapper_proxy;
-use crate::{
-    dataset_wrapper::{DataSetWrapper, Record},
-    value_wrapper::ValueWrapper,
-    TimezoneInfo,
-};
+use crate::{value_wrapper::ValueWrapper, TimezoneInfo};
 
 #[async_trait]
 pub trait GraphQuery {
+    type Error: From<GraphQueryError> + std::error::Error;
     /// Execute stmt and return the query output.
     /// ## Notice
     /// For operation that doesn't return result, like `CREATE TAG`, `USE space` etc.
     /// it's recommended to use `execute(stmt)`.
     #[allow(clippy::ptr_arg)]
-    async fn query(&mut self, stmt: &str) -> Result<GraphQueryOutput, GraphQueryError>;
+    async fn query(&mut self, stmt: &str) -> Result<GraphQueryOutput, Self::Error>;
 
     /// Execute stmt and doesn't return the execution output.
     #[allow(clippy::ptr_arg)]
-    async fn execute(&mut self, stmt: &str) -> Result<(), GraphQueryError> {
+    async fn execute(&mut self, stmt: &str) -> Result<(), Self::Error> {
         let _ = self.query(stmt).await?;
         Ok(())
     }
 
-    async fn show_hosts(&mut self) -> Result<Vec<Host>, GraphQueryError> {
+    async fn show_hosts(&mut self) -> Result<Vec<Host>, Self::Error> {
         let tmp = self.query(STMT_SHOW_HOSTS).await?;
         tmp.scan::<Host>()
-            .map_err(GraphQueryError::DataDeserializeError)
+            .map_err(|e| GraphQueryError::DataSetError(e).into())
     }
 
-    async fn show_spaces(&mut self) -> Result<Vec<Space>, GraphQueryError> {
+    async fn show_spaces(&mut self) -> Result<Vec<Space>, Self::Error> {
         let tmp = self.query(STMT_SHOW_SPACES).await?;
         tmp.scan::<Space>()
-            .map_err(GraphQueryError::DataDeserializeError)
+            .map_err(|e| GraphQueryError::DataSetError(e).into())
     }
 }
 
@@ -123,7 +120,7 @@ dataset_wrapper_proxy!(GraphQueryOutput);
 pub enum GraphQueryError {
     ExecuteError(ExecuteError),
     ResponseError(ErrorCode, Option<Vec<u8>>),
-    DataDeserializeError(DataDeserializeError),
+    DataSetError(DataSetError),
 }
 
 impl core::fmt::Display for GraphQueryError {
@@ -133,7 +130,7 @@ impl core::fmt::Display for GraphQueryError {
             Self::ResponseError(err_code, err_msg) => {
                 write!(f, "ResponseError err_code:{err_code} err_msg:{err_msg:?}",)
             }
-            Self::DataDeserializeError(err) => write!(f, "DataDeserializeError {err}"),
+            Self::DataSetError(err) => write!(f, "DataSetError {err}"),
         }
     }
 }
