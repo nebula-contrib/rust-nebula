@@ -152,7 +152,7 @@ impl DataSetWrapper {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.get_col_size() == 0
+        self.get_row_size() == 0
     }
 
     fn has_col_name(&self, col_name: &str) -> bool {
@@ -283,7 +283,7 @@ macro_rules! dataset_wrapper_proxy {
             }
 
             pub fn is_empty(&self) -> bool {
-                self.get_col_size() == 0
+                self.get_row_size() == 0
             }
         }
     };
