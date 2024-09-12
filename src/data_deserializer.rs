@@ -554,29 +554,12 @@ impl DataDeserializeError {
 pub enum DataDeserializeErrorKind {
     UnexpectedEndOf,
     TypeMismatch,
+    ConversionError(String, String),
     Unimplemented,
     Custom(String),
 }
 
-impl DataDeserializeErrorKind {
-    #[allow(deprecated)]
-    fn description(&self) -> &str {
-        use self::DataDeserializeErrorKind::*;
-
-        match *self {
-            UnexpectedEndOf => "Unexpected end of",
-            TypeMismatch => "Type mismatch",
-            Unimplemented => "Unimplemented",
-            Custom(ref msg) => msg,
-        }
-    }
-}
-
-impl std::error::Error for DataDeserializeError {
-    fn description(&self) -> &str {
-        self.kind.description()
-    }
-}
+impl std::error::Error for DataDeserializeError {}
 
 impl de::Error for DataDeserializeError {
     fn custom<T: core::fmt::Display>(msg: T) -> DataDeserializeError {
@@ -601,11 +584,14 @@ impl core::fmt::Display for DataDeserializeErrorKind {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         use self::DataDeserializeErrorKind::*;
 
-        match *self {
-            UnexpectedEndOf => write!(f, "{}", self.description()),
-            TypeMismatch => write!(f, "{}", self.description()),
-            Unimplemented => write!(f, "{}", self.description()),
-            Custom(ref msg) => write!(f, "{msg}"),
+        match self {
+            UnexpectedEndOf => write!(f, "Unexpected end of"),
+            TypeMismatch => write!(f, "Type mismatch"),
+            Unimplemented => write!(f, "Unimplemented"),
+            ConversionError(from_type, to_type) => {
+                write!(f, "failed to convert value {} to {}", from_type, to_type)
+            }
+            Custom(msg) => write!(f, "{msg}"),
         }
     }
 }

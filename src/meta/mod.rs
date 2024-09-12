@@ -1,5 +1,5 @@
 pub mod client;
-pub use client::MetaClient;
+pub use client::{MetaClient, MetaClientError};
 
 mod metacache;
 

@@ -3,15 +3,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use fbthrift_transport::{AsyncTransport, AsyncTransportConfiguration};
 use fbthrift_transport_response_handler::ResponseHandler;
-use nebula_fbthrift_graph_v3::graph_service::AuthenticateError;
 
 use crate::HostAddress;
 use crate::{
-    graph::{connection::GraphConnection, GraphQuery, GraphQueryError},
+    graph::{connection::GraphConnection, GraphQuery},
     GraphTransportResponseHandler,
 };
 
-use super::SingleConnSession;
+use super::{SingleConnSession, SingleConnSessionError};
 
 #[derive(Debug)]
 pub struct SingleConnSessionConf {
@@ -181,30 +180,3 @@ impl bb8::ManageConnection for SingleConnSessionManager {
         conn.is_close_required()
     }
 }
-
-#[derive(Debug)]
-pub enum SingleConnSessionError {
-    TransportBuildError(std::io::Error),
-    AuthenticateError(AuthenticateError),
-    GraphQueryError(GraphQueryError),
-}
-
-impl core::fmt::Display for SingleConnSessionError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match self {
-            Self::TransportBuildError(err) => write!(f, "TransportBuildError {err}"),
-            Self::AuthenticateError(err) => write!(f, "AuthenticateError {err}"),
-            Self::GraphQueryError(err) => write!(f, "GraphQueryError {err}"),
-        }
-    }
-}
-
-impl From<GraphQueryError> for SingleConnSessionError {
-    fn from(value: GraphQueryError) -> Self {
-        Self::GraphQueryError(value)
-    }
-}
-
-impl std::error::Error for SingleConnSessionError {}
-
-unsafe impl Send for SingleConnSessionError {}

@@ -17,9 +17,11 @@ pub struct DataSetWrapper {
 
 #[derive(Debug)]
 pub struct Record<'a> {
+    #[allow(dead_code)]
     column_names: &'a Vec<Vec<u8>>,
     records: Vec<ValueWrapper<'a>>,
     col_name_index_map: &'a HashMap<Vec<u8>, usize>,
+    #[allow(dead_code)]
     timezone_info: &'a TimezoneInfo,
 }
 
@@ -81,9 +83,12 @@ impl DataSetWrapper {
     }
 
     // Returns all values in the given column
-    pub fn get_values_by_col_name(&self, col_name: &str) -> Result<Vec<ValueWrapper>, ()> {
+    pub fn get_values_by_col_name(
+        &self,
+        col_name: &str,
+    ) -> Result<Vec<ValueWrapper>, DataSetError> {
         if !self.has_col_name(col_name) {
-            return Err(());
+            return Err(DataSetError::UnexistedColumnError(col_name.to_string()));
         }
         let col_name = col_name.as_bytes().to_vec();
         let index = self.col_name_index_map[&col_name];
@@ -95,12 +100,12 @@ impl DataSetWrapper {
         Ok(val_list)
     }
 
-    pub fn get_row_values_by_index<'a>(&'a self, index: usize) -> Result<Record<'a>, ()> {
+    pub fn get_row_values_by_index<'a>(&'a self, index: usize) -> Result<Record<'a>, DataSetError> {
         if index >= self.get_row_size() {
-            return Err(());
+            return Err(DataSetError::InvalidIndexError(index, self.get_row_size()));
         }
         let rows = self.get_rows();
-        let val_wrap = gen_val_wraps(&rows[index as usize], &self.timezone_info)?;
+        let val_wrap = gen_val_wraps(&rows[index], &self.timezone_info);
         Ok(Record {
             column_names: &self.get_col_names(),
             records: val_wrap,
@@ -109,7 +114,7 @@ impl DataSetWrapper {
         })
     }
 
-    pub fn scan<D>(&self) -> Result<Vec<D>, DataDeserializeError>
+    pub fn scan<D>(&self) -> Result<Vec<D>, DataSetError>
     where
         D: DeserializeOwned,
     {
@@ -121,7 +126,8 @@ impl DataSetWrapper {
         let rows = self.get_rows();
         for row in rows.iter() {
             let mut data_deserializer = DataDeserializer::new(names, &row.values);
-            let data = D::deserialize(&mut data_deserializer)?;
+            let data = D::deserialize(&mut data_deserializer)
+                .map_err(DataSetError::DataDeserializeError)?;
             data_set.push(data);
         }
         Ok(data_set)
@@ -230,35 +236,33 @@ macro_rules! dataset_wrapper_proxy {
             }
 
             // Returns all values in the given column
-            pub fn get_values_by_col_name(&self, col_name: &str) -> Result<Vec<ValueWrapper>, ()> {
+            pub fn get_values_by_col_name(
+                &self,
+                col_name: &str,
+            ) -> Result<Vec<ValueWrapper>, DataSetError> {
                 if let Some(data_set) = self.dataset() {
-                    data_set.get_values_by_col_name(col_name).map_err(|_| ())
+                    data_set.get_values_by_col_name(col_name)
                 } else {
-                    Err(())
+                    Err(DataSetError::UnexistedDataSetError)
                 }
             }
 
-            pub fn get_row_values_by_index(&self, index: usize) -> Result<Record, ()> {
+            pub fn get_row_values_by_index(&self, index: usize) -> Result<Record, DataSetError> {
                 if let Some(data_set) = self.dataset() {
-                    data_set.get_row_values_by_index(index).map_err(|_| ())
+                    data_set.get_row_values_by_index(index)
                 } else {
-                    Err(())
+                    Err(DataSetError::UnexistedDataSetError)
                 }
             }
 
-            pub fn scan<D>(&self) -> Result<Vec<D>, DataDeserializeError>
+            pub fn scan<D>(&self) -> Result<Vec<D>, DataSetError>
             where
                 D: DeserializeOwned,
             {
                 if let Some(data_set) = self.dataset() {
                     data_set.scan::<D>()
                 } else {
-                    Err(DataDeserializeError {
-                        field: None,
-                        kind: DataDeserializeErrorKind::Custom(
-                            "DataSet doesn't exist!".to_string(),
-                        ),
-                    })
+                    Err(DataSetError::UnexistedDataSetError)
                 }
             }
 
@@ -286,16 +290,16 @@ macro_rules! dataset_wrapper_proxy {
 }
 
 impl<'a> Record<'a> {
-    pub fn get_value_by_index(&self, index: i32) -> Result<&ValueWrapper, ()> {
-        if index < 0 || index as usize > self.records.len() {
-            return Err(());
+    pub fn get_value_by_index(&self, index: usize) -> Result<&ValueWrapper, DataSetError> {
+        if index as usize > self.records.len() {
+            return Err(DataSetError::InvalidIndexError(index, self.records.len()));
         }
         Ok(&self.records[index as usize])
     }
 
-    pub fn get_value_by_col_name(&self, col_name: &str) -> Result<&ValueWrapper, ()> {
+    pub fn get_value_by_col_name(&self, col_name: &str) -> Result<&ValueWrapper, DataSetError> {
         if !self.has_col_name(col_name) {
-            return Err(());
+            return Err(DataSetError::UnexistedColumnError(col_name.to_string()));
         }
         let col_name = col_name.as_bytes().to_vec();
         let index = self.col_name_index_map[&col_name];
@@ -312,3 +316,28 @@ impl<'a> Record<'a> {
         self.col_name_index_map.contains_key(&col_name)
     }
 }
+
+#[derive(Debug)]
+pub enum DataSetError {
+    InvalidIndexError(usize, usize),
+    UnexistedColumnError(String),
+    DataDeserializeError(DataDeserializeError),
+    UnexistedDataSetError,
+}
+
+impl core::fmt::Display for DataSetError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match self {
+            Self::InvalidIndexError(idx, len) => {
+                write!(f, "InvalidIndexError idx: {idx} len:{len}")
+            }
+            Self::UnexistedColumnError(col_name) => {
+                write!(f, "UnexistedColumnError Column {col_name} doesn't exist",)
+            }
+            Self::DataDeserializeError(err) => write!(f, "DataSetError {err}"),
+            Self::UnexistedDataSetError => write!(f, "UnexistedDataSetError"),
+        }
+    }
+}
+
+impl std::error::Error for DataSetError {}

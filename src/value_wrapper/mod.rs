@@ -1,37 +1,27 @@
-use core::fmt;
 use std::collections::HashMap;
-use std::error::Error;
 
 use crate::common::types::Value;
 use crate::common::{Duration, Geography, NullType, Row};
 
-use crate::TimezoneInfo;
+use crate::data_deserializer::{DataDeserializeError, DataDeserializeErrorKind};
+use crate::{DataSetError, TimezoneInfo};
 use datetime::{DataTimeWrapper, DateWrapper, TimeWrapper};
 use relationship::{Node, PathWrapper, Relationship};
 
 pub mod datetime;
 pub mod relationship;
 
-#[derive(Debug)]
-pub struct ConversionError {
-    from_type: String,
-    to_type: String,
-}
-impl Error for ConversionError {}
-
-impl fmt::Display for ConversionError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "failed to convert value {} to {}",
-            self.from_type, self.to_type
-        )
-    }
+fn new_conversion_error(from_type: String, to_type: String) -> DataSetError {
+    DataSetError::DataDeserializeError(DataDeserializeError::new(
+        None,
+        DataDeserializeErrorKind::ConversionError(from_type, to_type),
+    ))
 }
 
 #[derive(Debug)]
 pub struct ValueWrapper<'a> {
     value: &'a Value,
+    #[allow(dead_code)]
     timezone_info: &'a TimezoneInfo,
 }
 
@@ -44,16 +34,11 @@ impl<'a> ValueWrapper<'a> {
     }
 }
 
-pub fn gen_val_wraps<'a>(
-    row: &'a Row,
-    timezone_info: &'a TimezoneInfo,
-) -> Result<Vec<ValueWrapper<'a>>, ()> {
-    let val_wraps: Vec<ValueWrapper> = row
-        .values
+pub fn gen_val_wraps<'a>(row: &'a Row, timezone_info: &'a TimezoneInfo) -> Vec<ValueWrapper<'a>> {
+    row.values
         .iter()
         .map(|v| ValueWrapper::new(v, timezone_info))
-        .collect();
-    Ok(val_wraps)
+        .collect()
 }
 
 impl<'a> ValueWrapper<'a> {
@@ -127,103 +112,103 @@ impl<'a> ValueWrapper<'a> {
 }
 
 impl<'a> ValueWrapper<'a> {
-    pub fn as_null(&self) -> Result<&NullType, ConversionError> {
+    pub fn as_null(&self) -> Result<&NullType, DataSetError> {
         if let Value::nVal(v) = self.value {
             Ok(v)
         } else {
-            Err(ConversionError {
-                from_type: self.get_type().to_string(),
-                to_type: "Null".to_string(),
-            })
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "Null".to_string(),
+            ))
         }
     }
 
-    pub fn as_bool(&self) -> Result<&bool, ConversionError> {
+    pub fn as_bool(&self) -> Result<&bool, DataSetError> {
         if let Value::bVal(v) = self.value {
             Ok(v)
         } else {
-            Err(ConversionError {
-                from_type: self.get_type().to_string(),
-                to_type: "bool".to_string(),
-            })
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "bool".to_string(),
+            ))
         }
     }
 
-    pub fn as_int(&self) -> Result<&i64, ConversionError> {
+    pub fn as_int(&self) -> Result<&i64, DataSetError> {
         if let Value::iVal(v) = self.value {
             Ok(v)
         } else {
-            Err(ConversionError {
-                from_type: self.get_type().to_string(),
-                to_type: "int".to_string(),
-            })
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "int".to_string(),
+            ))
         }
     }
 
-    pub fn as_float(&self) -> Result<f64, ConversionError> {
+    pub fn as_float(&self) -> Result<f64, DataSetError> {
         if let Value::fVal(v) = self.value {
             Ok(v.0)
         } else {
-            Err(ConversionError {
-                from_type: self.get_type().to_string(),
-                to_type: "float".to_string(),
-            })
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "float".to_string(),
+            ))
         }
     }
 
-    pub fn as_string(&self) -> Result<String, ConversionError> {
+    pub fn as_string(&self) -> Result<String, DataSetError> {
         if let Value::sVal(v) = self.value {
             Ok(String::from_utf8(v.to_vec()).unwrap())
         } else {
-            Err(ConversionError {
-                from_type: self.get_type().to_string(),
-                to_type: "string".to_string(),
-            })
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "string".to_string(),
+            ))
         }
     }
 
-    pub fn as_time(&self) -> Result<TimeWrapper, ConversionError> {
+    pub fn as_time(&self) -> Result<TimeWrapper, DataSetError> {
         todo!("Implement conversion to TimeWrapper")
     }
 
-    pub fn as_date(&self) -> Result<DateWrapper, ConversionError> {
+    pub fn as_date(&self) -> Result<DateWrapper, DataSetError> {
         todo!("Implement conversion to DateWrapper")
     }
 
-    pub fn as_date_time(&self) -> Result<DataTimeWrapper, ConversionError> {
+    pub fn as_date_time(&self) -> Result<DataTimeWrapper, DataSetError> {
         todo!("Implement conversion to DateTimeWrapper")
     }
 
-    pub fn as_list(&self) -> Result<Vec<ValueWrapper>, ConversionError> {
+    pub fn as_list(&self) -> Result<Vec<ValueWrapper>, DataSetError> {
         todo!("Implement conversion to Vec<ValueWrapper>")
     }
 
     /// as_dedup_list converts the ValueWrapper to a slice of ValueWrapper that has unique elements
-    pub fn as_dedup_list(&self) -> Result<Vec<ValueWrapper>, ConversionError> {
+    pub fn as_dedup_list(&self) -> Result<Vec<ValueWrapper>, DataSetError> {
         todo!("Implement conversion to deduped Vec<ValueWrapper>")
     }
 
-    pub fn as_map(&self) -> Result<HashMap<String, ValueWrapper>, ConversionError> {
+    pub fn as_map(&self) -> Result<HashMap<String, ValueWrapper>, DataSetError> {
         todo!("Implement conversion to HashMap<String, ValueWrapper>")
     }
 
-    pub fn as_node(&self) -> Result<Node, ConversionError> {
+    pub fn as_node(&self) -> Result<Node, DataSetError> {
         todo!("Implement conversion to Node")
     }
 
-    pub fn as_relationship(&self) -> Result<Relationship, ConversionError> {
+    pub fn as_relationship(&self) -> Result<Relationship, DataSetError> {
         todo!("Implement conversion to Relationship")
     }
 
-    pub fn as_path(&self) -> Result<PathWrapper, ConversionError> {
+    pub fn as_path(&self) -> Result<PathWrapper, DataSetError> {
         todo!("Implement conversion to PathWrapper")
     }
 
-    pub fn as_geography(&self) -> Result<Geography, ConversionError> {
+    pub fn as_geography(&self) -> Result<Geography, DataSetError> {
         todo!("Implement conversion to nebula::Geography")
     }
 
-    pub fn as_duration(&self) -> Result<Duration, ConversionError> {
+    pub fn as_duration(&self) -> Result<Duration, DataSetError> {
         todo!("Implement conversion to nebula::Duration")
     }
 }
