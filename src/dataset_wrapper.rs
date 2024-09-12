@@ -146,7 +146,7 @@ impl DataSetWrapper {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.get_col_size() == 0
+        self.get_row_size() == 0
     }
 
     fn has_col_name(&self, col_name: &str) -> bool {
@@ -255,7 +255,7 @@ macro_rules! dataset_wrapper_proxy {
                 } else {
                     Err(DataDeserializeError {
                         field: None,
-                        kind: DataDeserializeErrorKind::Custom(
+                        kind: crate::data_deserializer::DataDeserializeErrorKind::Custom(
                             "DataSet doesn't exist!".to_string(),
                         ),
                     })
@@ -279,7 +279,7 @@ macro_rules! dataset_wrapper_proxy {
             }
 
             pub fn is_empty(&self) -> bool {
-                self.get_col_size() == 0
+                self.get_row_size() == 0
             }
         }
     };
