@@ -53,7 +53,7 @@ where
             connection,
             session_id,
             close_required: false,
-            timezone_info: TimezoneInfo {},
+            timezone_info: TimezoneInfo::default(),
         }
     }
 

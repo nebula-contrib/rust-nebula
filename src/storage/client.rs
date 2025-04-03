@@ -113,7 +113,7 @@ where
         Self {
             connection_map: HashMap::new(),
             mclient,
-            timezone_info: TimezoneInfo {},
+            timezone_info: TimezoneInfo::default(),
         }
     }
 

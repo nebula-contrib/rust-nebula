@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::common::types::Value;
-use crate::common::{Duration, Geography, NullType, Row};
+use crate::common::{Geography, NullType, Row};
 
 use crate::data_deserializer::{DataDeserializeError, DataDeserializeErrorKind};
 use crate::{DataSetError, TimezoneInfo};
-use datetime::{DataTimeWrapper, DateWrapper, TimeWrapper};
+use datetime::{DateTimeWrapper, DateWrapper, DurationWrapper, TimeWrapper};
 use relationship::{Node, PathWrapper, Relationship};
 
 pub mod datetime;
@@ -21,7 +21,6 @@ fn new_conversion_error(from_type: String, to_type: String) -> DataSetError {
 #[derive(Debug)]
 pub struct ValueWrapper<'a> {
     value: &'a Value,
-    #[allow(dead_code)]
     timezone_info: &'a TimezoneInfo,
 }
 
@@ -168,15 +167,36 @@ impl<'a> ValueWrapper<'a> {
     }
 
     pub fn as_time(&self) -> Result<TimeWrapper, DataSetError> {
-        todo!("Implement conversion to TimeWrapper")
+        if let Value::tVal(v) = self.value {
+            Ok(TimeWrapper::new(v, self.timezone_info))
+        } else {
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "time".to_string(),
+            ))
+        }
     }
 
     pub fn as_date(&self) -> Result<DateWrapper, DataSetError> {
-        todo!("Implement conversion to DateWrapper")
+        if let Value::dVal(v) = self.value {
+            Ok(DateWrapper::new(v, self.timezone_info))
+        } else {
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "date".to_string(),
+            ))
+        }
     }
 
-    pub fn as_date_time(&self) -> Result<DataTimeWrapper, DataSetError> {
-        todo!("Implement conversion to DateTimeWrapper")
+    pub fn as_date_time(&self) -> Result<DateTimeWrapper, DataSetError> {
+        if let Value::dtVal(v) = self.value {
+            Ok(DateTimeWrapper::new(v, self.timezone_info))
+        } else {
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "datetime".to_string(),
+            ))
+        }
     }
 
     pub fn as_list(&self) -> Result<Vec<ValueWrapper>, DataSetError> {
@@ -208,8 +228,15 @@ impl<'a> ValueWrapper<'a> {
         todo!("Implement conversion to nebula::Geography")
     }
 
-    pub fn as_duration(&self) -> Result<Duration, DataSetError> {
-        todo!("Implement conversion to nebula::Duration")
+    pub fn as_duration(&self) -> Result<DurationWrapper, DataSetError> {
+        if let Value::duVal(v) = self.value {
+            Ok(DurationWrapper::new(v))
+        } else {
+            Err(new_conversion_error(
+                self.get_type().to_string(),
+                "datetime".to_string(),
+            ))
+        }
     }
 }
 

@@ -45,4 +45,19 @@ impl HostAddress {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone)]
-pub struct TimezoneInfo {}
+pub struct TimezoneInfo {
+    offset: i32,
+    name: String,
+}
+
+impl Default for TimezoneInfo {
+    fn default() -> Self {
+        Self::new(0, "UTC".to_string())
+    }
+}
+
+impl TimezoneInfo {
+    fn new(offset: i32, name: String) -> Self {
+        Self { offset, name }
+    }
+}

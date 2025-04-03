@@ -26,6 +26,9 @@ serde = { version = "1", default-features = false, features = [
 
 bytes = { version = "1", default-features = false }
 async-trait = { version = "0.1", default-features = false }
+chrono = { version = "0.4", features = [
+    "serde",
+], default-features = false, optional = true }
 
 nebula-fbthrift-graph-v3 = { version = "^0.3", default-features = false, optional = true }
 nebula-fbthrift-meta-v3 = { version = "^0.3", default-features = false, optional = true }
@@ -33,7 +36,6 @@ nebula-fbthrift-storage-v3 = { version = "^0.3", default-features = false, optio
 bb8 = "0.8.5"
 
 [dev-dependencies]
-chrono = { version = "0.4", features = ["serde"] }
 serde_repr = { version = "0.1" }
 float-cmp = { version = "0.9" }
 
